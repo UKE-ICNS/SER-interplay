@@ -1,4 +1,7 @@
 __pycache__/
 Files/*
 !Files/.gitkeep 
+!Files/notworkdev.pckl
+!Files/phase2trtr.pckl
+!Files/phase3trtr.pckl 
 

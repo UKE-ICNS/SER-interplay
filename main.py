@@ -47,13 +47,13 @@ aa = list(a)
 aa_3 = np.array([i for i in aa if len(i)==3], dtype=np.int8)
 
 #load pickles with template connections
-items = loadall('Search\\marc\\notworkdev_02-11-2022-19-07.pckl')   
+items = loadall('Files\\notworkdev.pckl')   
 fin = tuple(items)[0][0]
 
-items1 = loadall('Search\\marc\\phase2trtr_07-11-2022-16-56.pckl')   
+items1 = loadall('Files\\phase2trtr.pckl')   
 un2 = tuple(items1)[0]
 
-items2 = loadall('Search\\marc\\phase3trtr_07-11-2022-17-20.pckl')   
+items2 = loadall('Files\\phase3trtr.pckl')   
 un1 = tuple(items2)[0]
 
 ##1. Triangles
