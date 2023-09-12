@@ -1,3 +1,4 @@
+import datetime
 import itertools
 import pickle
 import numpy as np
@@ -138,6 +139,77 @@ def un_roll(atr_list):
 
     return fin
 
+#Function to get all unique attractors for chunked data
+def un_roll1(atr_list):
+    '''Takes ends of an unpickled array for all chunks, returns pickle files 
+    containing attractors of the system and their amount for all chunks'''
+    name_sp = f'Files//data//space_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
+    file_sp = open(name_sp, 'wb')
+
+    name_c = f'Files//data//counts_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
+    file_c = open(name_c, 'wb')
+
+    for counter in range(len(atr_list)):  
+        attrs = atr_list[counter]
+
+        no_at = 0 #no attractor of size 3 is defined
+        fix_p0 = 0 #fixed point 0
+        other = 0 #attractor of size 3
+        indices_help = []
+
+        for i in range(np.shape(attrs)[0]):
+            if ((attrs[i]==1).all())==1: no_at += 1
+            if ((attrs[i]==0).all())==1: fix_p0 += 1
+            if (((attrs[i]==1).all())!=1) and ((attrs[i]==0).all())!=1: 
+                other +=1
+                indices_help.append(i)
+
+        #create an arrray of all the attractors of size 3
+        all_attractors = attrs[indices_help]
+        u_a = np.unique(all_attractors,axis=0)
+        u_a_counts = np.unique(all_attractors,axis=0,return_counts=True)[-1]
+        rollers = [[]]
+
+        #need to check if in u_a any attractors which are just rolled versions of themselves
+        for i in range(len(u_a)):
+            for j in range(len(u_a)):
+                if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==27: #check rolled array
+                    k=in_list(i, rollers)
+                    q=in_list(j, rollers)
+                    if (k==-1) and (q==-1):
+                        rollers.append([i,j])
+                    if (k==-1) and (q!=-1):
+                        rollers[q].append(i)
+                        rollers.append([])
+                    if (k!=-1) and (q==-1):
+                        rollers[k].append(j)
+                        rollers.append([])
+                    if (k!=-1) and (q!=-1):
+                        # rollers[q].append(i)
+                        # rollers[k].append(j)
+                        rollers.append([])
+            t=in_list(i, rollers)
+            if t==-1:
+                rollers.append([i])
+
+        #remove empty lists
+        rolled = [x for x in rollers if x != []]           
+
+        fin = u_a[Extract(rolled),:,:]
+
+        fin_counts = np.zeros(len(fin))
+
+        for i in range(len(fin)):
+            fin_counts[i] = np.sum(u_a_counts[Unique(rolled)[i]])
+
+        pickle.dump([fin], file_sp)
+        pickle.dump([fin_counts], file_c)
+
+    file_c.close()
+    file_sp.close()
+    
+    return[name_sp, name_c]
+
 #Function to load pickles
 def loadall(filename):
     '''Takes a filename, loads pickles'''
@@ -196,3 +268,29 @@ def lim_cyclesn_before(A_ran, pos_clc, n): #n=matrix size - 3
             break
 
     return pos_atr, rea_atr
+
+#Function to get the repeating ends from the initial conditions
+@jit(nopython=True, cache=True)
+def attrs(chunk):
+    '''Gets the repeating ends of the array'''
+    c_ar_sq_us = chunk #comment in and out for different conditions
+
+    steps_with_effects = 0 #transient period
+    at_s=3 #attractor size
+    attrs = np.ones((np.shape(c_ar_sq_us)[0],9,3))
+
+    for i in range(np.shape(c_ar_sq_us)[0]):
+        loop_step = steps_with_effects
+        while loop_step<=(np.shape(c_ar_sq_us)[2]-2*at_s):
+            attractor = c_ar_sq_us[i][:,loop_step:loop_step+at_s]
+            attractor_shift = c_ar_sq_us[i][:,loop_step+at_s:loop_step+2*at_s]
+            loop_test = (attractor==attractor_shift)
+            if loop_test.all()!=1: 
+                print("No stable attractor for condition ", i)
+                break
+            if loop_step == (np.shape(c_ar_sq_us)[2]-2*at_s):
+                at = attractor
+                attrs[i] = at
+            loop_step += 1
+
+    return attrs

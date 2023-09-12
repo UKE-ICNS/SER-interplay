@@ -1,19 +1,18 @@
-##Upon a given adjacency matrix explore the emerging space
-
 import numpy as np
 import matplotlib.pyplot as plt
 import datetime
 import pickle
 import itertools
 import pandas as pd
-from numba import jit
 import networkx as nx
 import torch as th
+from funcs import attrs
 from funcs import loadall
 from funcs import overlap
 from funcs import positive_triag
 from funcs import small_device
 from funcs import lim_cyclesn_before
+from funcs import un_roll1
 from SER_interplay import SERmodel_multneuro_buf_c
 
 #%% Triangle calculation 
@@ -151,7 +150,8 @@ if aa_3.size>0: #if there are any triangles
 
         #leave only working trinagles
         w_pl_clc = pl_clc[np.where((np.array(work)=='yes'))[0]]
-        ee, dd = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
+        #to check if there are any triangles that are non-working due to other interactions
+        pos_atr_fromw, rea_atr_fromw = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
 
         ##3. Triangle-hook interactions
 
@@ -278,66 +278,34 @@ if aa_3.size>0: #if there are any triangles
             fin_w_pl_clc = np.array(fin_w_pl_clc)
             if len(w_pl_clc)!=0:
                 if len(fin_w_pl_clc)!=0:
-                    e, d = lim_cyclesn_before(A_ran,fin_w_pl_clc,len(A_ran)-3)
+                    pos_atr, rea_atr = lim_cyclesn_before(A_ran,fin_w_pl_clc,len(A_ran)-3)
                 else:
                     print('All triangles are deactivated or itself')
-                    e, d = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
+                    pos_atr, rea_atr = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
             else:
-                e, d = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
-        #e, d, lb = lim_cyclesn(A_ran,w_pl_clc_constrs,len(A_ran)-3)
+                pos_atr, rea_atr = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
         
     else:
         print('There are no positive triangles in this graph')
 else:
         print('There are no positive triangles in this graph')
 
-#%% run all on GPU
-As = np.array((A_ran,A_ran))
+#%% run all on GPU to check if we get the same attractors by simulation
+As = np.array((A_ran,A_ran)) #constracting Cs arrays for a function
 ia = list(itertools.product([0,1,-1], repeat=9))
-Cs = np.array(As.transpose((0,2,1)))
+Cs = np.array(As.transpose((0,2,1))) #constracting Cs arrays for a function
 ress_buf = SERmodel_multneuro_buf_c(Cs, 100, ia)
-name2 = f'Search\\marc\\ss_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
+name2 = f'Files\\data\\ser_data_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
 file = open(name2, 'wb')
 
-th.save(ress_buf,file)
+th.save(ress_buf,file) #saving
 
 loaded_buf2 = th.load(name2)
 
-loaded_sims = loaded_buf2.cpu().detach().numpy()
+loaded_sims = loaded_buf2.cpu().detach().numpy() #loading to a numpy array
 #%% get attractors
-
-@jit(nopython=True, cache=True)
-def attrs(chunk):
-    c_ar_sq_us = chunk #comment in and out for different conditions
-    #nost = np.empty(1)
-
-    steps_with_effects = 0 #transient period
-    at_s=3 #attractor size
-    attrs = np.ones((np.shape(c_ar_sq_us)[0],9,3))
-
-    for i in range(np.shape(c_ar_sq_us)[0]):
-        loop_step = steps_with_effects
-        while loop_step<=(np.shape(c_ar_sq_us)[2]-2*at_s):
-            attractor = c_ar_sq_us[i][:,loop_step:loop_step+at_s]
-            attractor_shift = c_ar_sq_us[i][:,loop_step+at_s:loop_step+2*at_s]
-            loop_test = (attractor==attractor_shift)
-            if loop_test.all()!=1: 
-                print("No stable attractor for condition ", i)
-                #nost = np.append(nost,i)
-                break
-            if loop_step == (np.shape(c_ar_sq_us)[2]-2*at_s):
-                at = attractor
-                attrs[i] = at
-                #print(at)
-                #print(i)
-            loop_step += 1
-
-    #nnost = nost.astype(np.int64)[1:] #indices for longer attractors
-
-    return attrs
-
 #save attractor ends
-name_at = f'Search//marc//attractorss_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
+name_at = f'Files//data//attractors_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
 file_at = open(name_at, 'wb')
 
 for k in range(len(loaded_sims)):
@@ -348,90 +316,21 @@ for k in range(len(loaded_sims)):
 
 file_at.close()
 
-#%% get unique attractors
-
+#get unique attractors for all data chunks
 # to load the existing dataset
 items_attr = loadall(name_at)   
 c_at = list(items_attr)
 c_ar_at=np.array(c_at)
 attrs1 = np.squeeze(c_ar_at)
 
-name_sp = f'Search//marc//spacess_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
-file_sp = open(name_sp, 'wb')
+name_space, name_counts = un_roll1(attrs1)
 
-name_c = f'Search//marc//countsss_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
-file_c = open(name_c, 'wb')
-
-for counter in range(len(attrs1)):    
-    attrs = attrs1[counter]
-
-    no_at = 0 #no attractor of size 3 is defined
-    fix_p0 = 0 #fixed point 0
-    other = 0 #attractor of size 3
-    indices_help = []
-
-    for i in range(np.shape(attrs)[0]):
-        if ((attrs[i]==1).all())==1: no_at += 1
-        if ((attrs[i]==0).all())==1: fix_p0 += 1
-        if (((attrs[i]==1).all())!=1) and ((attrs[i]==0).all())!=1: 
-            other +=1
-            indices_help.append(i)
-
-    #create an arrray of all the attractors of size 3
-    all_attractors = attrs[indices_help]
-
-    #calculate the number of unique attractors
-    u_a = np.unique(all_attractors,axis=0)
-
-    #calculate the counts of this attractors
-    u_a_counts = np.unique(all_attractors,axis=0,return_counts=True)[-1]
-
-    rollers = [[]]
-
-    #need to check if in u_a any attractors which are just rolled versions of themselves
-    for i in range(len(u_a)):
-        for j in range(len(u_a)):
-            if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==27: #check rolled array
-                k=in_list(i, rollers)
-                q=in_list(j, rollers)
-                if (k==-1) and (q==-1):
-                    rollers.append([i,j])
-                if (k==-1) and (q!=-1):
-                    rollers[q].append(i)
-                    rollers.append([])
-                if (k!=-1) and (q==-1):
-                    rollers[k].append(j)
-                    rollers.append([])
-                if (k!=-1) and (q!=-1):
-                    # rollers[q].append(i)
-                    # rollers[k].append(j)
-                    rollers.append([])
-        t=in_list(i, rollers)
-        if t==-1:
-            rollers.append([i])
-
-    #remove empty lists
-    rolled = [x for x in rollers if x != []]           
-
-    attractor_space = u_a[Extract(rolled),:,:]
-
-    attractor_counts = np.zeros(len(attractor_space))
-
-    for i in range(len(attractor_space)):
-        attractor_counts[i] = np.sum(u_a_counts[Unique(rolled)[i]])
-
-    pickle.dump([attractor_space], file_sp)
-    pickle.dump([attractor_counts], file_c)
-
-file_c.close()
-file_sp.close()
-
-items_attr = loadall(name_c)   
+items_attr = loadall(name_counts)   
 c_at = list(items_attr)
 c_ar_at=np.array(c_at)
 counts = np.squeeze(c_ar_at)
 
-items_attr = loadall(name_sp)   
-c_at = list(items_attr)
-c_ar_at=np.array(c_at)
-space = np.squeeze(c_ar_at)
+items_attr1 = loadall(name_space)   
+c_at1 = list(items_attr1)
+c_ar_at1=np.array(c_at1)
+space = np.squeeze(c_ar_at1)
