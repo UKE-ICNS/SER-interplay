@@ -140,9 +140,10 @@ def un_roll(atr_list):
     return fin
 
 #Function to get all unique attractors for chunked data
-def un_roll1(atr_list):
+def un_roll1(atr_list, s):
     '''Takes ends of an unpickled array for all chunks, returns pickle files 
-    containing attractors of the system and their amount for all chunks'''
+    containing attractors of the system and their amount for all chunks.
+    s=size of the network'''
     name_sp = f'Files//data//space_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
     file_sp = open(name_sp, 'wb')
 
@@ -173,7 +174,7 @@ def un_roll1(atr_list):
         #need to check if in u_a any attractors which are just rolled versions of themselves
         for i in range(len(u_a)):
             for j in range(len(u_a)):
-                if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==27: #check rolled array
+                if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==3*s: #check rolled array
                     k=in_list(i, rollers)
                     q=in_list(j, rollers)
                     if (k==-1) and (q==-1):
@@ -271,13 +272,13 @@ def lim_cyclesn_before(A_ran, pos_clc, n): #n=matrix size - 3
 
 #Function to get the repeating ends from the initial conditions
 @jit(nopython=True, cache=True)
-def attrs(chunk):
-    '''Gets the repeating ends of the array'''
+def attrs(chunk, s):
+    '''Gets the repeating ends of the array, s=size of the graph'''
     c_ar_sq_us = chunk #comment in and out for different conditions
 
     steps_with_effects = 0 #transient period
     at_s=3 #attractor size
-    attrs = np.ones((np.shape(c_ar_sq_us)[0],9,3))
+    attrs = np.ones((np.shape(c_ar_sq_us)[0],s,3))
 
     for i in range(np.shape(c_ar_sq_us)[0]):
         loop_step = steps_with_effects
@@ -294,3 +295,159 @@ def attrs(chunk):
             loop_step += 1
 
     return attrs
+
+#Function to create families of adjacency matrices
+def fam(adj, empt):
+    '''Gets adjacency matrix template and the number of empty spaces, 
+    returns a family of adjacency matrices'''
+    q = np.expand_dims(adj,axis=0)
+    q1 = np.repeat(q,3**empt,axis=0)
+    iters = list(itertools.product([0,1,-1], repeat=empt))
+    for i in range(len(iters)):
+        q1[i][q1[i]==5] = iters[i]
+    return q1
+
+#Function to create more complicated families of adjacency matrices
+def famd1(adjx):
+    '''Gets adjacency matrix template, returns a family of adjacency matrices'''
+    adjx1 = adjx.astype(np.int8)
+    adjx2 = adjx.astype(np.int8)
+    adjx3 = adjx.astype(np.int8)
+    adjx4 = adjx.astype(np.int8)
+    adjx5 = adjx.astype(np.int8)
+    adjx6 = adjx.astype(np.int8)
+    adjx7 = adjx.astype(np.int8)
+    adjx8 = adjx.astype(np.int8)
+    adjx9 = adjx.astype(np.int8)
+
+    adjx21 = adjx.astype(np.int8)
+    adjx22 = adjx.astype(np.int8)
+    adjx23 = adjx.astype(np.int8)
+    adjx24 = adjx.astype(np.int8)
+    adjx25 = adjx.astype(np.int8)
+    adjx26 = adjx.astype(np.int8)
+    adjx27 = adjx.astype(np.int8)
+    adjx28 = adjx.astype(np.int8)
+    adjx29 = adjx.astype(np.int8)
+
+    adjx10 = adjx.astype(np.int8)
+    adjx11 = adjx.astype(np.int8)
+    adjx12 = adjx.astype(np.int8)
+
+    adjx1[0][0] = -1
+    adjx1[1][0] = -1
+    adjx1[1][2] = -1
+
+    adjx2 = np.roll(adjx1,1,axis=0)
+    adjx3 = np.roll(adjx1,2,axis=0)
+
+    adjx4 = np.roll(adjx1,1,axis=1)
+    adjx5 = np.roll(adjx1,2,axis=1)
+    adjx6 = np.roll(adjx2,1,axis=1)
+    adjx7 = np.roll(adjx2,2,axis=1)
+    adjx8 = np.roll(adjx3,1,axis=1)
+    adjx9 = np.roll(adjx3,2,axis=1)
+
+    adjx21[0][0] = -1
+    adjx21[1][0] = -1
+    adjx21[0][1] = -1
+
+    adjx22 = np.roll(adjx21,1,axis=0)
+    adjx23 = np.roll(adjx21,2,axis=0)
+
+    adjx24 = np.roll(adjx21,1,axis=1)
+    adjx25 = np.roll(adjx21,2,axis=1)
+    adjx26 = np.roll(adjx22,1,axis=1)
+    adjx27 = np.roll(adjx22,2,axis=1)
+    adjx28 = np.roll(adjx23,1,axis=1)
+    adjx29 = np.roll(adjx23,2,axis=1)
+
+    adjx10[0][2] = -1
+    adjx10[1][1] = -1
+    adjx10[2][0] = -1
+
+    adjx11 = np.roll(adjx10,1,axis=0)
+    adjx12 = np.roll(adjx10,2,axis=0)
+
+    #create families of matrices and find uniques
+    famx1 = fam(adjx1, 6)
+    famx2 = fam(adjx2, 6)
+    famx3 = fam(adjx3, 6)
+    famx4 = fam(adjx4, 6)
+    famx5 = fam(adjx5, 6)
+    famx6 = fam(adjx6, 6)
+    famx7 = fam(adjx7, 6)
+    famx8 = fam(adjx8, 6)
+    famx9 = fam(adjx9, 6)
+
+    famx10 = fam(adjx10, 6)
+    famx11 = fam(adjx11, 6)
+    famx12 = fam(adjx12, 6)
+
+    famx21 = fam(adjx21, 6)
+    famx22 = fam(adjx22, 6)
+    famx23 = fam(adjx23, 6)
+    famx24 = fam(adjx24, 6)
+    famx25 = fam(adjx25, 6)
+    famx26 = fam(adjx26, 6)
+    famx27 = fam(adjx27, 6)
+    famx28 = fam(adjx28, 6)
+    famx29 = fam(adjx29, 6)
+
+    all_famx = np.concatenate((famx1,famx2,famx3,famx4,famx5,famx6,
+        famx7,famx8,famx9,famx10,famx11,famx12,famx21,famx22,famx23,famx24,famx25,
+        famx26,famx27,famx28,famx29))
+
+    famx_un = np.unique(all_famx,axis=0)
+
+    tw = np.unique(np.concatenate((famx1,famx2,famx3,famx4,famx5,famx6,
+        famx7,famx8,famx9,famx21,famx22,famx23,famx24,famx25,
+        famx26,famx27,famx28,famx29)),axis=0)
+
+    on = np.unique(np.concatenate((famx10,famx11,famx12)),axis=0)
+
+    return famx_un, all_famx, tw, on
+
+#Function to create another more complicated families of adjacency matrices
+def famd2(adjx):
+    '''Gets adjacency matrix template, returns a family of adjacency matrices'''
+    adjx1 = adjx.astype(np.int8)
+    adjx2 = adjx.astype(np.int8)
+    adjx3 = adjx.astype(np.int8)
+    adjx4 = adjx.astype(np.int8)
+    adjx5 = adjx.astype(np.int8)
+    adjx6 = adjx.astype(np.int8)
+    adjx7 = adjx.astype(np.int8)
+    adjx8 = adjx.astype(np.int8)
+    adjx9 = adjx.astype(np.int8)
+
+    adjx1[0][0] = -1
+    adjx1[1][2] = -1
+
+    adjx2 = np.roll(adjx1,1,axis=0)
+    adjx3 = np.roll(adjx1,2,axis=0)
+
+    adjx4 = np.roll(adjx1,1,axis=1)
+    adjx5 = np.roll(adjx1,2,axis=1)
+    adjx6 = np.roll(adjx2,1,axis=1)
+    adjx7 = np.roll(adjx2,2,axis=1)
+    adjx8 = np.roll(adjx3,1,axis=1)
+    adjx9 = np.roll(adjx3,2,axis=1)
+
+    #create families of matrices and find uniques
+    famx1 = fam(adjx1, 7)
+    famx2 = fam(adjx2, 7)
+    famx3 = fam(adjx3, 7)
+    famx4 = fam(adjx4, 7)
+    famx5 = fam(adjx5, 7)
+    famx6 = fam(adjx6, 7)
+    famx7 = fam(adjx7, 7)
+    famx8 = fam(adjx8, 7)
+    famx9 = fam(adjx9, 7)
+
+    all_famx = np.concatenate((famx1,famx2,famx3,famx4,famx5,famx6,
+        famx7,famx8,famx9))
+
+    famx_un = np.unique(all_famx,axis=0)
+
+    return famx_un, all_famx

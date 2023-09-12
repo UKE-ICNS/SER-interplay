@@ -310,7 +310,7 @@ file_at = open(name_at, 'wb')
 
 for k in range(len(loaded_sims)):
     
-    res_attrs = attrs(loaded_sims[k])
+    res_attrs = attrs(loaded_sims[k],9)
 
     pickle.dump([res_attrs], file_at)
 
@@ -323,7 +323,7 @@ c_at = list(items_attr)
 c_ar_at=np.array(c_at)
 attrs1 = np.squeeze(c_ar_at)
 
-name_space, name_counts = un_roll1(attrs1)
+name_space, name_counts = un_roll1(attrs1,9)
 
 items_attr = loadall(name_counts)   
 c_at = list(items_attr)
