@@ -4,4 +4,5 @@ Files/*
 !Files/notworkdev.pckl
 !Files/phase2trtr.pckl
 !Files/phase3trtr.pckl 
+!Files/data/.gitkeep
 
