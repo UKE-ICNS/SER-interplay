@@ -105,7 +105,7 @@ def in_list(c, classes):
     return -1
 
 #Function to get all unique attractors
-def un_roll(atr_list):
+def un_roll(atr_list, s):
     '''Takes ends of an unpickled array, returns attractors of the system'''
     u_a = np.unique(atr_list,axis=0)
     rollers = [[]]
@@ -113,7 +113,7 @@ def un_roll(atr_list):
     #need to check if in u_a any attractors which are just rolled versions of themselves
     for i in range(len(u_a)):
         for j in range(len(u_a)):
-            if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==27: #check rolled array
+            if np.sum(u_a[i] == np.roll(u_a[j],1,axis=1))==3*s: #check rolled array
                 k=in_list(i, rollers)
                 q=in_list(j, rollers)
                 if (k==-1) and (q==-1):
@@ -260,7 +260,7 @@ def lim_cyclesn_before(A_ran, pos_clc, n): #n=matrix size - 3
         if ch1==0:
             rea_atr = np.append(rea_atr,np.expand_dims(atr,axis=0),axis=0)
 
-    rea_atr = un_roll(rea_atr)
+    rea_atr = un_roll(rea_atr, len(A_ran))
     
     for i in range(len(rea_atr)):
         if np.all(rea_atr[i]==0):

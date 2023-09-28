@@ -17,14 +17,15 @@ from SER_interplay import SERmodel_multneuro_buf_c
 
 #%% Triangle calculation 
 #to use random connectome with the size 9 (other size involves changing the function)!
-#gr_size = 9
+gr_size = 10
 #A_ran = np.random.randint(-1,2,size=(gr_size, gr_size)) #random adjacency
+A_ran = np.random.choice([0, 1,-1], size=(gr_size,gr_size), p=[0.8, 0.16,0.04])#random adjacency with density
 
 #to use cabessa connectome (application example)
-A_ran = np.array([[0,1,0,0,0,0,0,0,0], [0,0,1,0,1,1,1,1,1], [0,-1,0,0,0,0,0,0,0], 
-              [-1,-1,-1,0,0,0,0,0,0], [0,0,0,1,0,1,0,0,1], [0,0,-1,-1,-1,0,-1,-1,0], 
-              [0,0,0,0,0,-1,0,0,0], [0,0,0,-1,0,-1,0,0,0], [1,1,1,0,1,0,1,1,0]]) #directed BG network 
-              #(SC, Th, RTN, GPi/SNr, STN, GPe, D2, D1, Ctx) 
+# A_ran = np.array([[0,1,0,0,0,0,0,0,0], [0,0,1,0,1,1,1,1,1], [0,-1,0,0,0,0,0,0,0], 
+#               [-1,-1,-1,0,0,0,0,0,0], [0,0,0,1,0,1,0,0,1], [0,0,-1,-1,-1,0,-1,-1,0], 
+#               [0,0,0,0,0,-1,0,0,0], [0,0,0,-1,0,-1,0,0,0], [1,1,1,0,1,0,1,1,0]]) #directed BG network 
+#               #(SC, Th, RTN, GPi/SNr, STN, GPe, D2, D1, Ctx) 
 
 #to use cabessa connectome (PD state) (application example)
 # A_ran = np.array([[0,1,0,0,0,0,0,0,0], [0,0,1,0,1,1,1,1,1], [0,-1,0,0,0,0,0,0,0], 
@@ -151,7 +152,7 @@ if aa_3.size>0: #if there are any triangles
         #leave only working trinagles
         w_pl_clc = pl_clc[np.where((np.array(work)=='yes'))[0]]
         #to check if there are any triangles that are non-working due to other interactions
-        pos_atr_fromw, rea_atr_fromw = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3)
+        #pos_atr_fromw, rea_atr_fromw = lim_cyclesn_before(A_ran,w_pl_clc,len(A_ran)-3) #uncomment to check before rea_atr
 
         ##3. Triangle-hook interactions
 
@@ -287,12 +288,14 @@ if aa_3.size>0: #if there are any triangles
         
     else:
         print('There are no positive triangles in this graph')
+        rea_atr = np.empty()
 else:
-        print('There are no positive triangles in this graph')
+        print('There are no triangles in this graph')
+        rea_atr = np.empty()
 
 #%% run all on GPU to check if we get the same attractors by simulation
 As = np.array((A_ran,A_ran)) #constracting Cs arrays for a function
-ia = list(itertools.product([0,1,-1], repeat=9))
+ia = list(itertools.product([0,1,-1], repeat=len(A_ran)))
 Cs = np.array(As.transpose((0,2,1))) #constracting Cs arrays for a function
 ress_buf = SERmodel_multneuro_buf_c(Cs, 100, ia)
 name2 = f'Files\\data\\ser_data_{datetime.datetime.now().strftime("%d-%m-%Y-%H-%M")}.pckl'  
@@ -310,7 +313,7 @@ file_at = open(name_at, 'wb')
 
 for k in range(len(loaded_sims)):
     
-    res_attrs = attrs(loaded_sims[k],9)
+    res_attrs = attrs(loaded_sims[k],len(A_ran))
 
     pickle.dump([res_attrs], file_at)
 
@@ -323,7 +326,7 @@ c_at = list(items_attr)
 c_ar_at=np.array(c_at)
 attrs1 = np.squeeze(c_ar_at)
 
-name_space, name_counts = un_roll1(attrs1,9)
+name_space, name_counts = un_roll1(attrs1,len(A_ran))
 
 items_attr = loadall(name_counts)   
 c_at = list(items_attr)
